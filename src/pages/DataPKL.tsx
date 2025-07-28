@@ -1,35 +1,55 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Search, Edit, Trash2, FileText, Filter } from "lucide-react"
+import { supabase } from "@/integrations/supabase/client"
 
 const DataPKL = () => {
   const [searchTerm, setSearchTerm] = useState("")
+  const [pklData, setPklData] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const pklData = [
-    { id: 1, jenis: "REGULER", nama: "Achyar Nur Sahid", periode: "04/02/2025 - 30/06/2025", guru: "Mohrus, S.Sos., M.Pd", jumlahSiswa: 1 },
-    { id: 2, jenis: "REGULER", nama: "Achyar Nur Sahid", periode: "31/01/2025 - 31/05/2025", guru: "Achyar Nur Sahid", jumlahSiswa: 1 },
-    { id: 3, jenis: "REGULER", nama: "Hadi Purnomo", periode: "28/01/2025 - 31/05/2025", guru: "Hadi Purnomo", jumlahSiswa: 1 },
-    { id: 4, jenis: "REGULER", nama: "Muhammad S.Sos, M.Pd", periode: "20/01/2025 - 31/05/2025", guru: "Mohrus, S.Sos., M.Pd", jumlahSiswa: 1 },
-    { id: 5, jenis: "REGULER", nama: "Ahmad Ridho, S.Kom", periode: "06/01/2025 - 31/05/2025", guru: "Mohrus, S.Sos., M.Pd", jumlahSiswa: 2 },
-    { id: 6, jenis: "REGULER", nama: "Dian Maharani, S.Pd", periode: "02/01/2025 - 31/05/2025", guru: "Mohrus, S.Sos., M.Pd", jumlahSiswa: 2 },
-    { id: 7, jenis: "REGULER", nama: "Siti Aminah", periode: "02/01/2025 - 31/05/2025", guru: "Hadi Purnomo", jumlahSiswa: 1 },
-    { id: 8, jenis: "REGULER", nama: "Budi Santoso", periode: "02/01/2025 - 31/05/2025", guru: "Hadi Purnomo", jumlahSiswa: 2 },
-    { id: 9, jenis: "REGULER", nama: "Dewi Sartika", periode: "02/01/2025 - 31/05/2025", guru: "Mohrus, S.Sos., M.Pd", jumlahSiswa: 1 },
-    { id: 10, jenis: "REGULER", nama: "Rudi Hartono", periode: "02/01/2025 - 31/05/2025", guru: "Mohrus, S.Sos., M.Pd", jumlahSiswa: 1 },
-    { id: 11, jenis: "REGULER", nama: "Maya Sari", periode: "02/01/2025 - 31/05/2025", guru: "Achyar Nur Sahid", jumlahSiswa: 4 },
-    { id: 12, jenis: "REGULER", nama: "Andi Wijaya", periode: "02/01/2025 - 31/05/2025", guru: "Mohrus, S.Sos., M.Pd", jumlahSiswa: 4 },
-    { id: 13, jenis: "REGULER", nama: "Linda Kusuma", periode: "02/01/2025 - 31/05/2025", guru: "Mohrus, S.Sos., M.Pd", jumlahSiswa: 4 },
-    { id: 14, jenis: "REGULER", nama: "Toni Setiawan", periode: "02/01/2025 - 31/05/2025", guru: "Achyar Nur Sahid", jumlahSiswa: 4 },
-    { id: 15, jenis: "REGULER", nama: "Rina Melati", periode: "02/01/2025 - 31/05/2025", guru: "Hadi Purnomo", jumlahSiswa: 6 },
-    { id: 16, jenis: "REGULER", nama: "Joko Susilo", periode: "02/01/2025 - 31/05/2025", guru: "Mohrus, S.Sos., M.Pd", jumlahSiswa: 3 },
-    { id: 17, jenis: "REGULER", nama: "Sri Wahyuni", periode: "02/01/2025 - 31/05/2025", guru: "Hadi Purnomo", jumlahSiswa: 7 },
-    { id: 18, jenis: "REGULER", nama: "Bambang Utomo", periode: "02/01/2025 - 31/05/2025", guru: "Mohrus, S.Sos., M.Pd", jumlahSiswa: 6 },
-    { id: 19, jenis: "REGULER", nama: "Fitri Handayani", periode: "02/01/2025 - 31/05/2025", guru: "Hadi Purnomo", jumlahSiswa: 6 },
-    { id: 20, jenis: "REGULER", nama: "Agus Prasetyo", periode: "02/01/2025 - 31/05/2025", guru: "Hadi Purnomo", jumlahSiswa: 2 },
-  ]
+  useEffect(() => {
+    fetchPklData()
+  }, [])
+
+  const fetchPklData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select(`
+          *,
+          pkl_placements (
+            *,
+            companies (nama),
+            teachers (nama),
+            pkl_periods (start_date, end_date)
+          )
+        `)
+
+      if (error) throw error
+      
+      const formattedData = data?.map(student => {
+        const placement = student.pkl_placements?.[0]
+        return {
+          id: student.id,
+          jenis: "REGULER",
+          nama: student.nama,
+          periode: placement ? `${placement.pkl_periods.start_date} - ${placement.pkl_periods.end_date}` : "-",
+          guru: placement?.teachers?.nama || "-",
+          jumlahSiswa: 1
+        }
+      }) || []
+
+      setPklData(formattedData)
+    } catch (error) {
+      console.error('Error fetching PKL data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredData = pklData.filter(item =>
     item.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
