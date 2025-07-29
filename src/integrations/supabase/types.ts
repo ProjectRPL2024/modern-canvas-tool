@@ -117,6 +117,8 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          kategori: string | null
+          kecamatan: string | null
           nama: string
           phone: string | null
           updated_at: string
@@ -127,6 +129,8 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          kategori?: string | null
+          kecamatan?: string | null
           nama: string
           phone?: string | null
           updated_at?: string
@@ -137,6 +141,8 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          kategori?: string | null
+          kecamatan?: string | null
           nama?: string
           phone?: string | null
           updated_at?: string
@@ -519,6 +525,48 @@ export type Database = {
           nama?: string
           nip?: string | null
           position?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      violations: {
+        Row: {
+          created_at: string
+          deskripsi: string | null
+          id: string
+          jenis_pelanggaran: string | null
+          placement_id: string | null
+          sanksi: string | null
+          status: string | null
+          student_id: string
+          tanggal: string
+          teacher_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deskripsi?: string | null
+          id?: string
+          jenis_pelanggaran?: string | null
+          placement_id?: string | null
+          sanksi?: string | null
+          status?: string | null
+          student_id: string
+          tanggal: string
+          teacher_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deskripsi?: string | null
+          id?: string
+          jenis_pelanggaran?: string | null
+          placement_id?: string | null
+          sanksi?: string | null
+          status?: string | null
+          student_id?: string
+          tanggal?: string
+          teacher_id?: string | null
           updated_at?: string
         }
         Relationships: []

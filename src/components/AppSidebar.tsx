@@ -1,5 +1,5 @@
 
-import { Home, Settings, Database, FileText, Users, Monitor } from "lucide-react"
+import { Home, Settings, Database, FileText, Users, Monitor, GraduationCap, Award, Truck, Calendar, ClipboardList, UserCheck, BarChart3 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 
 import {
@@ -16,10 +16,23 @@ import {
 } from "@/components/ui/sidebar"
 
 const items = [
-  { title: "Home", url: "/", icon: Home },
+  { title: "Dashboard", url: "/", icon: Home },
+  { title: "Data PKL", url: "/data-pkl", icon: FileText },
+  { title: "Browse Siswa", url: "/browse-siswa", icon: Users },
+  { title: "Nilai Siswa", url: "/nilai-siswa", icon: GraduationCap },
+  { title: "Cetak Sertifikat", url: "/cetak-sertifikat", icon: Award },
+  { title: "Pengantaran", url: "/pengantaran", icon: Truck },
+  { title: "Presensi", url: "/presensi", icon: Calendar },
+  { title: "Penilaian", url: "/penilaian", icon: ClipboardList },
+  { title: "Pembimbingan", url: "/pembimbingan", icon: UserCheck },
+  { title: "Monitoring", url: "/monitoring", icon: Monitor },
+  { title: "Rekap PKL", url: "/laporan-rekap-pkl", icon: BarChart3 },
+  { title: "Rekap Siswa", url: "/laporan-rekap-siswa", icon: BarChart3 },
+  { title: "By Kategori", url: "/rekap-by-kategori", icon: BarChart3 },
+  { title: "Lap. Monitoring", url: "/laporan-monitoring", icon: BarChart3 },
+  { title: "Lap. Pelanggaran", url: "/laporan-pelanggaran", icon: BarChart3 },
+  { title: "Konfigurasi", url: "/konfigurasi", icon: Database },
   { title: "Settings", url: "/settings", icon: Settings },
-  { title: "Konfigurasi", url: "/konfigurasi", icon: Monitor },
-  { title: "Data PKL", url: "/data-pkl", icon: Database },
 ]
 
 export function AppSidebar() {
