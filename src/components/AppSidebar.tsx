@@ -1,6 +1,7 @@
 
 import { Home, Settings, Database, FileText, Users, Monitor, GraduationCap, Award, Truck, Calendar, ClipboardList, UserCheck, BarChart3 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 import {
   Sidebar,
@@ -40,6 +41,7 @@ export function AppSidebar() {
   const location = useLocation()
   const currentPath = location.pathname
   const collapsed = state === "collapsed"
+  const isMobile = useIsMobile()
 
   const isActive = (path: string) => currentPath === path
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
@@ -48,18 +50,18 @@ export function AppSidebar() {
   return (
     <Sidebar
       className={`bg-gradient-sidebar border-r border-sidebar-border transition-all duration-300`}
-      collapsible="icon"
+      collapsible={isMobile ? "offcanvas" : "icon"}
     >
       <SidebarContent className="pt-6">
         <div className="px-4 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-primary" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center">
+              <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
-            {!collapsed && (
+            {(!collapsed || isMobile) && (
               <div>
-                <h2 className="text-lg font-bold text-sidebar-foreground">SMK KRIAN 1</h2>
-                <p className="text-sm text-sidebar-foreground/70">Sistem Informasi PKL</p>
+                <h2 className="text-base sm:text-lg font-bold text-sidebar-foreground">SMK KRIAN 1</h2>
+                <p className="text-xs sm:text-sm text-sidebar-foreground/70">Sistem Informasi PKL</p>
               </div>
             )}
           </div>
@@ -67,7 +69,7 @@ export function AppSidebar() {
 
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/70 font-medium px-4 mb-2">
-            {!collapsed && "MENU UTAMA"}
+            {(!collapsed || isMobile) && "MENU UTAMA"}
           </SidebarGroupLabel>
 
           <SidebarGroupContent>
@@ -78,10 +80,10 @@ export function AppSidebar() {
                     <NavLink 
                       to={item.url} 
                       end 
-                      className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-lg ${getNavCls({ isActive })}`}
+                      className={({ isActive }) => `flex items-center gap-3 px-3 py-2 sm:py-2.5 rounded-lg ${getNavCls({ isActive })}`}
                     >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
-                      {!collapsed && <span className="font-medium">{item.title}</span>}
+                      <item.icon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                      {(!collapsed || isMobile) && <span className="font-medium text-sm sm:text-base">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -90,15 +92,15 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {!collapsed && (
+        {(!collapsed || isMobile) && (
           <div className="mt-auto p-4">
             <div className="bg-sidebar-accent/30 rounded-lg p-3">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Users className="h-4 w-4 text-primary" />
+                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Users className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-sidebar-foreground">Achyar Nur Sahid</p>
+                  <p className="text-xs sm:text-sm font-medium text-sidebar-foreground">Achyar Nur Sahid</p>
                   <p className="text-xs text-sidebar-foreground/70">Admin</p>
                 </div>
               </div>
