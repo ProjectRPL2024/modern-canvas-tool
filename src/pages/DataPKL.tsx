@@ -32,10 +32,10 @@ const DataPKL = () => {
         .from('pkl_placements')
         .select(`
           *,
-          students (nama, nis, rombel),
-          companies (nama),
-          teachers (nama),
-          pkl_periods (nama, start_date, end_date)
+          students!student_id (nama, nis, rombel),
+          companies!company_id (nama),
+          teachers!mentor_teacher_id (nama),
+          pkl_periods!period_id (nama, start_date, end_date)
         `)
 
       if (error) throw error
