@@ -67,7 +67,7 @@ const LaporanPelanggaran = () => {
         .gte('tanggal', startDate || '2025-01-01')
         .lte('tanggal', endDate || '2025-12-31')
 
-      if (selectedTeacher) {
+      if (selectedTeacher && selectedTeacher !== "all") {
         query = query.eq('teacher_id', selectedTeacher)
       }
 
@@ -144,7 +144,7 @@ const LaporanPelanggaran = () => {
                   <SelectValue placeholder="Semua Guru" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Semua Guru</SelectItem>
+                  <SelectItem value="all">Semua Guru</SelectItem>
                   {teacherOptions.map((teacher) => (
                     <SelectItem key={teacher.id} value={teacher.id}>
                       {teacher.nama}
