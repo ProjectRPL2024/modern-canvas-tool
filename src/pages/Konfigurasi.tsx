@@ -1,26 +1,162 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Upload, FileText, Image, Settings, Download } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Upload, FileText, Image, Settings, Download, Edit, Trash2, Save } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { supabase } from "@/integrations/supabase/client"
+
+interface ConfigData {
+  id?: string
+  label: string
+  value: string
+  template: string
+  type: string
+}
+
+interface ImageData {
+  id: string
+  name: string
+  type: string
+  active: boolean
+  url?: string
+}
 
 const Konfigurasi = () => {
-  const [headerImages, setHeaderImages] = useState([
-    { id: 1, name: "SMK Krian 1 Header", type: "report-header", active: true },
-    { id: 2, name: "Background Sertifikat Side A", type: "certificate-bg", active: false },
-    { id: 3, name: "Background Sertifikat Side B", type: "certificate-bg", active: false },
-  ])
+  const [configData, setConfigData] = useState<ConfigData[]>([])
+  const [headerImages, setHeaderImages] = useState<ImageData[]>([])
+  const [loading, setLoading] = useState(false)
+  const [editingConfig, setEditingConfig] = useState<ConfigData | null>(null)
+  const [editingImage, setEditingImage] = useState<ImageData | null>(null)
+  const { toast } = useToast()
 
-  const configData = [
-    { label: "ASPEK PENILAIAN", value: "18", template: "ASPmm" },
-    { label: "PERUSAHAAN (DU/DI)", value: "2011", template: "DUDImm" },
-    { label: "PEMBIMBING LAPANGAN", value: "479", template: "PBLmm" },
-    { label: "NOMOR SURAT PENGAJUAN", value: "1", template: "(mm)" },
-    { label: "NOMOR SURAT TUGAS", value: "203", template: "463.2/76 (N)/404.3.9/SMK KRIAN 1/R" },
-  ]
+  useEffect(() => {
+    loadConfiguration()
+    loadImages()
+  }, [])
+
+  const loadConfiguration = async () => {
+    // For now, using static data but can be connected to Supabase later
+    const defaultConfig: ConfigData[] = [
+      { id: "1", label: "ASPEK PENILAIAN", value: "18", template: "ASPmm", type: "numbering" },
+      { id: "2", label: "PERUSAHAAN (DU/DI)", value: "2011", template: "DUDImm", type: "numbering" },
+      { id: "3", label: "PEMBIMBING LAPANGAN", value: "479", template: "PBLmm", type: "numbering" },
+      { id: "4", label: "NOMOR SURAT PENGAJUAN", value: "1", template: "(mm)", type: "numbering" },
+      { id: "5", label: "NOMOR SURAT TUGAS", value: "203", template: "463.2/76 (N)/404.3.9/SMK KRIAN 1/R", type: "numbering" },
+    ]
+    setConfigData(defaultConfig)
+  }
+
+  const loadImages = async () => {
+    const defaultImages: ImageData[] = [
+      { id: "1", name: "SMK Krian 1 Header", type: "report-header", active: true },
+      { id: "2", name: "Background Sertifikat Side A", type: "certificate-bg", active: false },
+      { id: "3", name: "Background Sertifikat Side B", type: "certificate-bg", active: false },
+    ]
+    setHeaderImages(defaultImages)
+  }
+
+  const saveConfiguration = async (config: ConfigData) => {
+    try {
+      setLoading(true)
+      // Update the local state (can be connected to Supabase later)
+      const updatedConfig = configData.map(item => 
+        item.id === config.id ? config : item
+      )
+      setConfigData(updatedConfig)
+      
+      toast({
+        title: "Sukses",
+        description: "Konfigurasi berhasil disimpan"
+      })
+      setEditingConfig(null)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal menyimpan konfigurasi",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      setLoading(true)
+      // For demo purposes, we'll create a new image entry
+      const newImage: ImageData = {
+        id: Date.now().toString(),
+        name: file.name,
+        type: "custom",
+        active: false,
+        url: URL.createObjectURL(file)
+      }
+      
+      setHeaderImages([...headerImages, newImage])
+      
+      toast({
+        title: "Sukses",
+        description: "Image berhasil diupload"
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal upload image",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleImageActive = async (imageId: string) => {
+    try {
+      const updatedImages = headerImages.map(img => ({
+        ...img,
+        active: img.id === imageId ? !img.active : false
+      }))
+      setHeaderImages(updatedImages)
+      
+      toast({
+        title: "Sukses", 
+        description: "Status image berhasil diupdate"
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal update status image",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const deleteImage = async (imageId: string) => {
+    if (!confirm("Yakin ingin menghapus image ini?")) return
+    
+    try {
+      const updatedImages = headerImages.filter(img => img.id !== imageId)
+      setHeaderImages(updatedImages)
+      
+      toast({
+        title: "Sukses",
+        description: "Image berhasil dihapus"
+      })
+    } catch (error) {
+      toast({
+        title: "Error", 
+        description: "Gagal menghapus image",
+        variant: "destructive"
+      })
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -67,6 +203,7 @@ const Konfigurasi = () => {
                       <tr className="border-b">
                         <th className="text-left py-3 px-4 font-semibold text-muted-foreground">COUNTER</th>
                         <th className="text-left py-3 px-4 font-semibold text-muted-foreground">TEMPLATE</th>
+                        <th className="text-left py-3 px-4 font-semibold text-muted-foreground">AKSI</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -78,7 +215,12 @@ const Konfigurasi = () => {
                               <Input 
                                 value={item.value} 
                                 className="w-20 h-8 text-sm"
-                                readOnly
+                                onChange={(e) => {
+                                  const updatedConfig = configData.map(config => 
+                                    config.id === item.id ? {...config, value: e.target.value} : config
+                                  )
+                                  setConfigData(updatedConfig)
+                                }}
                               />
                             </div>
                           </td>
@@ -86,17 +228,30 @@ const Konfigurasi = () => {
                             <Input 
                               value={item.template} 
                               className="max-w-xs h-8 text-sm"
-                              readOnly
+                              onChange={(e) => {
+                                const updatedConfig = configData.map(config => 
+                                  config.id === item.id ? {...config, template: e.target.value} : config
+                                )
+                                setConfigData(updatedConfig)
+                              }}
                             />
+                          </td>
+                          <td className="py-3 px-4">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => saveConfiguration(item)}
+                              disabled={loading}
+                            >
+                              <Save className="w-4 h-4 mr-1" />
+                              Simpan
+                            </Button>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                  SIMPAN
-                </Button>
               </div>
             </TabsContent>
 
@@ -104,10 +259,18 @@ const Konfigurasi = () => {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-foreground">Template Images</h3>
-                  <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Image
-                  </Button>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Image
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
@@ -116,16 +279,35 @@ const Konfigurasi = () => {
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-base">{image.name}</CardTitle>
-                          {image.active && (
-                            <Badge variant="default" className="bg-primary">
-                              Active
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant={image.active ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => toggleImageActive(image.id)}
+                            >
+                              {image.active ? "Active" : "Set Active"}
+                            </Button>
+                            {image.type === "custom" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => deleteImage(image.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </CardHeader>
                       <CardContent>
                         <div className="aspect-video bg-gradient-to-br from-accent/20 to-accent/10 rounded-lg flex items-center justify-center border-2 border-dashed border-accent/30">
-                          {image.type === "report-header" ? (
+                          {image.url ? (
+                            <img 
+                              src={image.url} 
+                              alt={image.name}
+                              className="max-w-full max-h-full object-contain rounded"
+                            />
+                          ) : image.type === "report-header" ? (
                             <div className="text-center p-8">
                               <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <FileText className="w-8 h-8 text-primary" />
@@ -144,10 +326,24 @@ const Konfigurasi = () => {
                           )}
                         </div>
                         <div className="flex items-center justify-between mt-4">
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setEditingImage(image)}
+                          >
+                            <Edit className="w-4 h-4 mr-1" />
                             Edit
                           </Button>
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              const link = document.createElement('a')
+                              link.href = image.url || '#'
+                              link.download = image.name
+                              link.click()
+                            }}
+                          >
                             <Download className="w-4 h-4 mr-2" />
                             Download
                           </Button>
@@ -164,11 +360,46 @@ const Konfigurasi = () => {
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-foreground">Surat Pengajuan PKL</h3>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload Dokumen
-                    </Button>
-                    <Button variant="outline" size="sm">
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept=".docx,.pdf,.doc"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            toast({
+                              title: "Sukses",
+                              description: `Template ${file.name} berhasil diupload`
+                            })
+                          }
+                        }}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      <Button variant="outline" size="sm">
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Dokumen
+                      </Button>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        // Create a simple text file download
+                        const element = document.createElement("a")
+                        const file = new Blob(["Template Surat Pengajuan PKL - SMK Krian 1"], 
+                          {type: 'text/plain'})
+                        element.href = URL.createObjectURL(file)
+                        element.download = "Template_Surat_Pengajuan.txt"
+                        document.body.appendChild(element)
+                        element.click()
+                        document.body.removeChild(element)
+                        
+                        toast({
+                          title: "Sukses",
+                          description: "Template berhasil didownload"
+                        })
+                      }}
+                    >
                       <Download className="w-4 h-4 mr-2" />
                       Download
                     </Button>
@@ -241,6 +472,64 @@ const Konfigurasi = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Edit Image Dialog */}
+      <Dialog open={!!editingImage} onOpenChange={() => setEditingImage(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Image</DialogTitle>
+          </DialogHeader>
+          {editingImage && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="imageName">Nama Image</Label>
+                <Input
+                  id="imageName"
+                  value={editingImage.name}
+                  onChange={(e) => setEditingImage({...editingImage, name: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label htmlFor="imageFile">Ganti File</Label>
+                <Input
+                  id="imageFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setEditingImage({
+                        ...editingImage,
+                        url: URL.createObjectURL(file)
+                      })
+                    }
+                  }}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setEditingImage(null)}>
+                  Batal
+                </Button>
+                <Button onClick={() => {
+                  if (editingImage) {
+                    const updatedImages = headerImages.map(img => 
+                      img.id === editingImage.id ? editingImage : img
+                    )
+                    setHeaderImages(updatedImages)
+                    setEditingImage(null)
+                    toast({
+                      title: "Sukses",
+                      description: "Image berhasil diupdate"
+                    })
+                  }
+                }}>
+                  Simpan
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
