@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Building2, Download } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
+import { generateLaporanPDF } from "@/lib/pdfGenerator"
+import { useToast } from "@/hooks/use-toast"
 import {
   Select,
   SelectContent,
@@ -27,6 +29,7 @@ const RekapByKategori = () => {
   const [reportData, setReportData] = useState<any[]>([])
   const [kategoriOptions, setKategoriOptions] = useState<string[]>([])
   const [groupBy, setGroupBy] = useState("rombel")
+  const { toast } = useToast()
 
   useEffect(() => {
     fetchKategoriOptions()
@@ -134,9 +137,24 @@ const RekapByKategori = () => {
             >
               {loading ? "Loading..." : "Load"}
             </Button>
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                const doc = generateLaporanPDF(
+                  `REKAP SISWA PKL - ${selectedKategori}`,
+                  reportData,
+                  ["NIS", "Nama", "Rombel", "Perusahaan", "Kecamatan", "Status"]
+                )
+                doc.save(`Rekap_By_Kategori_${selectedKategori}.pdf`)
+                toast({
+                  title: "Sukses",
+                  description: "Rekap by Kategori berhasil di-export ke PDF"
+                })
+              }}
+            >
               <Download className="w-4 h-4 mr-2" />
-              Export
+              Export PDF
             </Button>
           </div>
 

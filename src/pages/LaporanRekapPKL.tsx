@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, FileText, Download } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
+import { generateLaporanPDF } from "@/lib/pdfGenerator"
+import { useToast } from "@/hooks/use-toast"
 import {
   Table,
   TableBody,
@@ -19,6 +21,7 @@ const LaporanRekapPKL = () => {
   const [endDate, setEndDate] = useState("")
   const [loading, setLoading] = useState(false)
   const [reportData, setReportData] = useState<any[]>([])
+  const { toast } = useToast()
 
   const loadReport = async () => {
     setLoading(true)
@@ -97,9 +100,24 @@ const LaporanRekapPKL = () => {
             >
               {loading ? "Loading..." : "Load"}
             </Button>
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                const doc = generateLaporanPDF(
+                  "LAPORAN REKAP PKL",
+                  reportData,
+                  ["NIS", "Nama", "Rombel", "Perusahaan", "Kategori", "Status"]
+                )
+                doc.save("Laporan_Rekap_PKL.pdf")
+                toast({
+                  title: "Sukses",
+                  description: "Laporan Rekap PKL berhasil di-export ke PDF"
+                })
+              }}
+            >
               <Download className="w-4 h-4 mr-2" />
-              Export
+              Export PDF
             </Button>
           </div>
 

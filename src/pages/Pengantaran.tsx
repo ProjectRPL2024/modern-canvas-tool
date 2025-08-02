@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Truck, Edit, FileText, Calendar, Plus, Download, Trash2 } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/hooks/use-toast"
+import { generateSuratPengajuanPDF, generateSuratTugasPDF } from "@/lib/pdfGenerator"
 
 interface PickupDelivery {
   id?: string
@@ -155,71 +156,23 @@ const Pengantaran = () => {
     })
   }
 
-  const generateSuratPengajuan = (companyName: string) => {
-    const template = `
-SURAT PENGAJUAN PKL
-SMK KRIAN 1
-Jl. Kyai Mojo, Krian, Sidoarjo
-
-Kepada Yth. Pimpinan
-${companyName}
-
-Dengan Hormat,
-Kami sampaikan, bahwa pelaksanaan Praktik Kerja Lapangan (PKL) siswa SMK Krian 1 Sidoarjo akan dilaksanakan dalam 3 (tiga) bulan. Berkaitan dengan hal di atas, dengan ini kami ajukan permohonan izin Program Praktik Kerja Lapangan.
-
-Untuk melaksanakan PKL di perusahaan ini, atas perhatian dan kerjasamanya kami sampaikan terimakasih.
-
-Kepala SMK Krian 1
-Dian Maharani, S.Pd., M.MPd
-
-Ketua Pokja PKL  
-Ahmad Ridho, S.Kom
-`
-    
-    const element = document.createElement("a")
-    const file = new Blob([template], {type: 'text/plain'})
-    element.href = URL.createObjectURL(file)
-    element.download = `Surat_Pengajuan_${companyName.replace(/\s+/g, '_')}.txt`
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
+  const generateSuratPengajuan = (companyName: string, companyAddress?: string) => {
+    const doc = generateSuratPengajuanPDF(companyName, companyAddress)
+    doc.save(`Surat_Pengajuan_${companyName.replace(/\s+/g, '_')}.pdf`)
     
     toast({
       title: "Sukses",
-      description: "Surat Pengajuan berhasil di-generate"
+      description: "Surat Pengajuan PDF berhasil di-generate"
     })
   }
 
-  const generateSuratTugas = (companyName: string, teacherName?: string) => {
-    const template = `
-SURAT TUGAS
-SMK KRIAN 1
-Nomor: 463.2/76 (N)/404.3.9/SMK KRIAN 1/R
-
-MENUGASKAN:
-Nama: ${teacherName || '[NAMA GURU]'}
-NIP: [NIP GURU]  
-Jabatan: Guru Pembimbing PKL
-
-UNTUK:
-Melaksanakan pembimbingan siswa PKL di ${companyName}
-Periode: [TANGGAL MULAI] s/d [TANGGAL SELESAI]
-
-Kepala SMK Krian 1
-Dian Maharani, S.Pd., M.MPd
-`
-    
-    const element = document.createElement("a")
-    const file = new Blob([template], {type: 'text/plain'})
-    element.href = URL.createObjectURL(file)
-    element.download = `Surat_Tugas_${companyName.replace(/\s+/g, '_')}.txt`
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
+  const generateSuratTugas = (companyName: string, teacherName?: string, teacherNip?: string) => {
+    const doc = generateSuratTugasPDF(companyName, teacherName, teacherNip)
+    doc.save(`Surat_Tugas_${companyName.replace(/\s+/g, '_')}.pdf`)
     
     toast({
       title: "Sukses", 
-      description: "Surat Tugas berhasil di-generate"
+      description: "Surat Tugas PDF berhasil di-generate"
     })
   }
 
@@ -519,7 +472,7 @@ Dian Maharani, S.Pd., M.MPd
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => generateSuratPengajuan(item.companies?.nama)}
+                          onClick={() => generateSuratPengajuan(item.companies?.nama, item.companies?.alamat)}
                         >
                           <FileText className="w-4 h-4" />
                         </Button>

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Upload, FileText, Image, Settings, Download, Edit, Trash2, Save } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { generateSuratPengajuanPDF, generateSuratTugasPDF } from "@/lib/pdfGenerator"
 import { supabase } from "@/integrations/supabase/client"
 
 interface ConfigData {

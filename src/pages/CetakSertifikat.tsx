@@ -3,14 +3,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, FileText, Printer, Calendar } from "lucide-react"
+import { Search, FileText, Printer, Calendar, Download } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
+import { generateSertifikatPDF } from "@/lib/pdfGenerator"
+import { useToast } from "@/hooks/use-toast"
 
 const CetakSertifikat = () => {
   const [searchTerm, setSearchTerm] = useState("")
   const [students, setStudents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState("28/07/2024")
+  const { toast } = useToast()
 
   useEffect(() => {
     fetchStudents()
@@ -42,6 +45,28 @@ const CetakSertifikat = () => {
     student.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.nis.includes(searchTerm)
   )
+
+  const generateSertifikat = (student: any) => {
+    const placement = student.pkl_placements?.[0]
+    const grade = student.student_grades?.[0]
+    
+    const studentData = {
+      nama: student.nama,
+      nis: student.nis,
+      rombel: student.rombel,
+      companyName: placement?.companies?.nama || "PT. SO GOOD FOOD",
+      periode: "Juli - September 2024",
+      nilai: grade?.nilai || 80
+    }
+    
+    const doc = generateSertifikatPDF(studentData)
+    doc.save(`Sertifikat_${student.nama.replace(/\s+/g, '_')}.pdf`)
+    
+    toast({
+      title: "Sukses",
+      description: `Sertifikat untuk ${student.nama} berhasil di-generate`
+    })
+  }
 
   return (
     <div className="space-y-6">
@@ -105,7 +130,8 @@ const CetakSertifikat = () => {
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">NAMA SISWA</th>
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">ROMBEL</th>
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">DI PERUSAHAAN</th>
-                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm">NILAI RERATA</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">NILAI RERATA</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm">AKSI</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -127,7 +153,7 @@ const CetakSertifikat = () => {
                           <td className="py-3 px-4 border-r border-border text-sm text-muted-foreground">
                             {placement?.companies?.nama || "PT. SO GOOD FOOD"}
                           </td>
-                          <td className="py-3 px-4 text-center">
+                          <td className="py-3 px-4 border-r border-border text-center">
                             <Badge 
                               variant="outline" 
                               className={`${
@@ -138,6 +164,16 @@ const CetakSertifikat = () => {
                             >
                               {(grade?.nilai || 80).toFixed(2)}
                             </Badge>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => generateSertifikat(student)}
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              PDF
+                            </Button>
                           </td>
                         </tr>
                       )

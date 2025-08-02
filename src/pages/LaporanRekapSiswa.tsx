@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { FileText, Users, Download } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
+import { generateLaporanPDF } from "@/lib/pdfGenerator"
+import { useToast } from "@/hooks/use-toast"
 import {
   Select,
   SelectContent,
@@ -25,6 +27,7 @@ const LaporanRekapSiswa = () => {
   const [loading, setLoading] = useState(false)
   const [reportData, setReportData] = useState<any[]>([])
   const [rombelOptions, setRombelOptions] = useState<string[]>([])
+  const { toast } = useToast()
 
   useEffect(() => {
     fetchRombelOptions()
@@ -114,9 +117,24 @@ const LaporanRekapSiswa = () => {
             >
               {loading ? "Loading..." : "Load"}
             </Button>
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                const doc = generateLaporanPDF(
+                  `LAPORAN REKAP SISWA - ${selectedRombel}`,
+                  reportData,
+                  ["NIS", "Nama", "Perusahaan", "Guru", "Periode", "Status"]
+                )
+                doc.save(`Laporan_Rekap_Siswa_${selectedRombel}.pdf`)
+                toast({
+                  title: "Sukses",
+                  description: "Laporan Rekap Siswa berhasil di-export ke PDF"
+                })
+              }}
+            >
               <Download className="w-4 h-4 mr-2" />
-              Export
+              Export PDF
             </Button>
           </div>
 

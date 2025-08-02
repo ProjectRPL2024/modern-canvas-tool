@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Monitor, Download } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
+import { generateLaporanPDF } from "@/lib/pdfGenerator"
+import { useToast } from "@/hooks/use-toast"
 import {
   Select,
   SelectContent,
@@ -30,6 +32,7 @@ const LaporanMonitoring = () => {
   const [reportData, setReportData] = useState<any[]>([])
   const [rombelOptions, setRombelOptions] = useState<string[]>([])
   const [teacherOptions, setTeacherOptions] = useState<any[]>([])
+  const { toast } = useToast()
 
   useEffect(() => {
     fetchOptions()
@@ -181,9 +184,24 @@ const LaporanMonitoring = () => {
             >
               {loading ? "Loading..." : "Load"}
             </Button>
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                const doc = generateLaporanPDF(
+                  "LAPORAN MONITORING PKL",
+                  reportData,
+                  ["Tanggal", "NIS", "Nama Siswa", "Rombel", "Perusahaan"]
+                )
+                doc.save("Laporan_Monitoring_PKL.pdf")
+                toast({
+                  title: "Sukses",
+                  description: "Laporan Monitoring berhasil di-export ke PDF"
+                })
+              }}
+            >
               <Download className="w-4 h-4 mr-2" />
-              Export
+              Export PDF
             </Button>
           </div>
 
