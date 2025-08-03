@@ -295,7 +295,7 @@ const Konfigurasi = () => {
         <CardContent className="p-0">
           <Tabs defaultValue="numbering" className="w-full">
             <div className="border-b bg-muted/30">
-            <TabsList className="grid w-full grid-cols-4 bg-transparent h-auto p-0">
+            <TabsList className="grid w-full grid-cols-3 bg-transparent h-auto p-0">
               <TabsTrigger 
                 value="numbering" 
                 className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary py-4"
@@ -316,13 +316,6 @@ const Konfigurasi = () => {
               >
                 <FileText className="w-4 h-4 mr-2" />
                 TEMPLATE DOKUMEN
-              </TabsTrigger>
-              <TabsTrigger 
-                value="word-templates"
-                className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary py-4"
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                TEMPLATE SURAT
               </TabsTrigger>
             </TabsList>
             </div>
@@ -517,24 +510,18 @@ const Konfigurasi = () => {
                       variant="outline" 
                       size="sm"
                       onClick={() => {
-                        // Create a simple text file download
-                        const element = document.createElement("a")
-                        const file = new Blob(["Template Surat Pengajuan PKL - SMK Krian 1"], 
-                          {type: 'text/plain'})
-                        element.href = URL.createObjectURL(file)
-                        element.download = "Template_Surat_Pengajuan.txt"
-                        document.body.appendChild(element)
-                        element.click()
-                        document.body.removeChild(element)
+                        // Generate PDF Surat Pengajuan
+                        const doc = generateSuratPengajuanPDF("Contoh Perusahaan", "Jl. Contoh No. 123")
+                        doc.save("Template_Surat_Pengajuan_PKL.pdf")
                         
                         toast({
                           title: "Sukses",
-                          description: "Template berhasil didownload"
+                          description: "Template Surat Pengajuan PDF berhasil didownload"
                         })
                       }}
                     >
                       <Download className="w-4 h-4 mr-2" />
-                      Download
+                      Download PDF
                     </Button>
                   </div>
                 </div>
@@ -549,176 +536,75 @@ const Konfigurasi = () => {
                               <FileText className="w-8 h-8 text-primary" />
                             </div>
                             <div>
-                              <h4 className="font-bold text-lg">SMK KRIAN 1</h4>
-                              <p className="text-sm text-muted-foreground">Jl. Kyai Mojo, Krian, Sidoarjo</p>
+                              <h4 className="font-bold text-lg text-foreground">SMK KRIAN 1</h4>
+                              <p className="text-sm text-muted-foreground">KOMPETENSI KEAHLIAN REKAYASA PERANGKAT LUNAK</p>
+                              <p className="text-sm text-muted-foreground">Jl. Kyai Mojo, Krian, Sidoarjo - Jawa Timur</p>
                             </div>
                           </div>
-                          <h3 className="font-bold text-xl mb-2">SURAT PENGAJUAN</h3>
-                          <p className="text-muted-foreground">Nomor: [NOMOR] | Lampiran: [LAMPIRAN] | Hal: [HAL]</p>
+                          <h2 className="text-xl font-bold text-foreground mb-2">SURAT PENGAJUAN PKL</h2>
+                          <p className="text-sm text-muted-foreground">No: [NOMOR_SURAT]</p>
                         </div>
-
+                        
                         <div className="space-y-4 text-sm">
                           <div>
-                            <p><strong>Kepada</strong></p>
-                            <p>Yth. Pimpinan</p>
-                            <p><strong>[NAMA PERUSAHAAN]</strong></p>
-                            <p><strong>[ALAMAT PERUSAHAAN]</strong></p>
+                            <p>Kepada Yth.</p>
+                            <p className="font-semibold">[NAMA_PERUSAHAAN]</p>
+                            <p>[ALAMAT_PERUSAHAAN]</p>
                           </div>
-
+                          
                           <div>
-                            <p><strong>Dengan Hormat,</strong></p>
-                            <p>Kami sampaikan, bahwa pelaksanaan Praktik Kerja Lapangan (PKL) siswa SMK Krian 1 Sidoarjo akan dilaksanakan dalam 3 (tiga) bulan. Berkaitan dengan hal di atas, dengan ini kami ajukan permohonan izas Program Praktik Kerja Lapangan.</p>
+                            <p>Dengan hormat,</p>
+                            <p className="text-justify">
+                              Sehubungan dengan pelaksanaan Praktik Kerja Lapangan (PKL) bagi siswa SMK Krian 1,
+                              maka dengan ini kami mengajukan permohonan untuk dapat melaksanakan PKL di perusahaan
+                              yang Bapak/Ibu pimpin.
+                            </p>
                           </div>
-
-                          <div className="grid grid-cols-2 gap-4 my-6">
-                            <div>
-                              <table className="w-full text-sm">
-                                <tr><td>No.</td><td>:</td><td>[NOMOR] [SPINAMA]</td></tr>
-                                <tr><td></td><td></td><td>NAMA</td></tr>
-                                <tr><td></td><td></td><td>[KELAS]</td></tr>
-                                <tr><td></td><td></td><td>[JURUSAN]</td></tr>
-                              </table>
-                            </div>
+                          
+                          <div>
+                            <p className="font-semibold mb-2">Data Siswa:</p>
+                            <table className="w-full border border-border text-xs">
+                              <thead className="bg-muted/50">
+                                <tr>
+                                  <th className="border border-border p-2">No</th>
+                                  <th className="border border-border p-2">Nama Siswa</th>
+                                  <th className="border border-border p-2">Kelas</th>
+                                  <th className="border border-border p-2">No. HP</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  <td className="border border-border p-2 text-center">1</td>
+                                  <td className="border border-border p-2">[NAMA_SISWA_1]</td>
+                                  <td className="border border-border p-2">[KELAS_1]</td>
+                                  <td className="border border-border p-2">[HP_1]</td>
+                                </tr>
+                                <tr>
+                                  <td className="border border-border p-2 text-center">2</td>
+                                  <td className="border border-border p-2">[NAMA_SISWA_2]</td>
+                                  <td className="border border-border p-2">[KELAS_2]</td>
+                                  <td className="border border-border p-2">[HP_2]</td>
+                                </tr>
+                              </tbody>
+                            </table>
                           </div>
-
-                          <p>Untuk melaksanakan PKL di perusahaan ini, atas perhatian dan kerjasamanya kami sampaikan terimakasih.</p>
-
-                          <div className="flex justify-between mt-8">
+                          
+                          <div>
+                            <p className="text-justify">
+                              Demikian surat permohonan ini kami sampaikan. Atas perhatian dan kerjasamanya 
+                              kami ucapkan terima kasih.
+                            </p>
+                          </div>
+                          
+                          <div className="flex justify-end mt-8">
                             <div className="text-center">
-                              <p>Kepala SMK Krian 1</p>
-                              <div className="h-16"></div>
-                              <p><strong>Dian Maharani, S.Pd., M.MPd</strong></p>
-                            </div>
-                            <div className="text-center">
-                              <p>Ketua Pokja PKL</p>
-                              <div className="h-16"></div>
-                              <p><strong>Ahmad Ridho, S.Kom</strong></p>
+                              <p>Krian, [TANGGAL]</p>
+                              <p className="mb-16">Kepala Sekolah</p>
+                              <p className="font-semibold">[NAMA_KEPALA_SEKOLAH]</p>
+                              <p>NIP: [NIP_KEPALA_SEKOLAH]</p>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="word-templates" className="p-6 space-y-6">
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-foreground">Template Surat PKL</h3>
-                </div>
-
-                {/* Upload Template Section */}
-                <Card className="border-border shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-base">Upload Template</CardTitle>
-                    <CardDescription>
-                      Upload file Word sebagai template surat pengajuan PKL
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-                      <input
-                        type="file"
-                        accept=".docx,.doc"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) {
-                            handleTemplateUpload(file)
-                          }
-                        }}
-                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                      />
-                      <p className="mt-2 text-sm text-gray-500">
-                        Upload file Word (.docx) sebagai template surat
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Template List */}
-                <Card className="border-border shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-base">Template Tersedia</CardTitle>
-                    <CardDescription>
-                      Daftar template yang sudah diupload
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {templates.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                          <p>Belum ada template yang diupload</p>
-                        </div>
-                      ) : (
-                        templates.map((template) => (
-                          <div key={template.id} className="border rounded-lg p-4 flex justify-between items-center">
-                            <div>
-                              <h4 className="font-medium">{template.name}</h4>
-                              <p className="text-sm text-gray-500">
-                                Diupload pada {new Date(template.uploadedAt).toLocaleDateString('id-ID')}
-                              </p>
-                              {template.id === activeTemplateId && (
-                                <Badge variant="default" className="mt-1">Template Aktif</Badge>
-                              )}
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => previewTemplate(template)}
-                              >
-                                <FileText className="w-4 h-4 mr-1" />
-                                Preview
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setActiveTemplate(template.id)}
-                                disabled={template.id === activeTemplateId}
-                              >
-                                {template.id === activeTemplateId ? 'Aktif' : 'Aktifkan'}
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => deleteTemplate(template.id)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Variables Guide */}
-                <Card className="border-border shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-base">Panduan Variabel Template</CardTitle>
-                    <CardDescription>
-                      Variabel yang dapat digunakan dalam template Word
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-sm text-gray-600 mb-3">
-                        Gunakan variabel berikut dalam template Word Anda:
-                      </p>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div><code className="bg-gray-200 px-1 rounded">${'KOTA'}</code> - Nama kota</div>
-                        <div><code className="bg-gray-200 px-1 rounded">${'TANGGAL'}</code> - Tanggal surat</div>
-                        <div><code className="bg-gray-200 px-1 rounded">${'NOMORSURAT'}</code> - Nomor surat</div>
-                        <div><code className="bg-gray-200 px-1 rounded">${'NAMAPERUSAHAAN'}</code> - Nama perusahaan</div>
-                        <div><code className="bg-gray-200 px-1 rounded">${'ALAMATPERUSAHAAN'}</code> - Alamat perusahaan</div>
-                        <div><code className="bg-gray-200 px-1 rounded">${'COL_NO'}</code> - Kolom nomor</div>
-                        <div><code className="bg-gray-200 px-1 rounded">${'COL_NAMA'}</code> - Kolom nama siswa</div>
-                        <div><code className="bg-gray-200 px-1 rounded">${'COL_KELAS'}</code> - Kolom kelas</div>
-                        <div><code className="bg-gray-200 px-1 rounded">${'COL_HP'}</code> - Kolom HP siswa</div>
                       </div>
                     </div>
                   </CardContent>
