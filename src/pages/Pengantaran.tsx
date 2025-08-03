@@ -180,17 +180,78 @@ const Pengantaran = () => {
   };
 
   const generateSuratPengajuan = async (item: any) => {
-    if (uploadedTemplate) {
-      setEditingItem(item);
-      setTemplateDialogOpen(true);
-    } else {
-      // Fallback ke PDF generator lama
+    // Get active template from localStorage
+    const activeTemplateId = localStorage.getItem('activeTemplateId');
+    const templatesData = localStorage.getItem('wordTemplates');
+    
+    if (!activeTemplateId || !templatesData) {
+      // Fallback ke PDF generator
       const doc = generateSuratPengajuanPDF(item.companies?.nama, item.companies?.alamat)
       doc.save(`Surat_Pengajuan_${item.companies?.nama.replace(/\s+/g, '_')}.pdf`)
       
       toast({
         title: "Sukses",
         description: "Surat Pengajuan PDF berhasil di-generate"
+      })
+      return;
+    }
+
+    const templates = JSON.parse(templatesData);
+    const activeTemplate = templates.find((t: any) => t.id === activeTemplateId);
+    
+    if (!activeTemplate) {
+      toast({
+        title: "Error",
+        description: "Template aktif tidak ditemukan. Silakan atur template di menu Konfigurasi",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const templateVariables: TemplateVariables = {
+        KOTA: "Sidoarjo",
+        TANGGAL: new Date().toISOString(),
+        NOMORSURAT: `001/PKL/${new Date().getFullYear()}`,
+        NAMAPERUSAHAAN: item.companies?.nama || "",
+        ALAMATPERUSAHAAN: item.companies?.alamat || "",
+        COL_NO: "No",
+        COL_NAMA: "Nama Siswa", 
+        COL_KELAS: "Kelas",
+        COL_HP: "No. HP",
+        siswaData: [
+          { no: 1, nama: "Contoh Siswa 1", kelas: "XII RPL 1", hp: "081234567890" },
+          { no: 2, nama: "Contoh Siswa 2", kelas: "XII RPL 1", hp: "081234567891" }
+        ]
+      };
+
+      // Create File object from stored template
+      const templateFile = new File([activeTemplate.file], activeTemplate.name, { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      const processedDoc = await TemplateProcessor.processWordTemplate(templateFile, templateVariables);
+      
+      // Download file Word yang sudah diproses
+      const url = URL.createObjectURL(processedDoc);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Surat_Pengajuan_PKL_${item.companies?.nama?.replace(/\s+/g, '_') || 'Template'}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({ 
+        title: "Sukses", 
+        description: "Surat pengajuan berhasil dibuat dari template Word" 
+      });
+    } catch (error) {
+      // Fallback ke PDF jika gagal
+      const doc = generateSuratPengajuanPDF(item.companies?.nama, item.companies?.alamat)
+      doc.save(`Surat_Pengajuan_${item.companies?.nama.replace(/\s+/g, '_')}.pdf`)
+      
+      toast({
+        title: "Template Error - Fallback to PDF",
+        description: "Surat Pengajuan PDF berhasil di-generate",
+        variant: "destructive"
       })
     }
   }
@@ -257,13 +318,6 @@ const Pengantaran = () => {
           <p className="text-muted-foreground">Kelola pengantaran siswa ke perusahaan</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => setTemplateDialogOpen(true)}
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Upload Template
-          </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => {

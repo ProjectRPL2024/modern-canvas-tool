@@ -10,6 +10,7 @@ import { Upload, FileText, Image, Settings, Download, Edit, Trash2, Save } from 
 import { useToast } from "@/hooks/use-toast"
 import { generateSuratPengajuanPDF, generateSuratTugasPDF } from "@/lib/pdfGenerator"
 import { supabase } from "@/integrations/supabase/client"
+import { TemplateProcessor } from "@/lib/templateProcessor"
 
 interface ConfigData {
   id?: string
@@ -27,17 +28,28 @@ interface ImageData {
   url?: string
 }
 
+interface WordTemplate {
+  id: string
+  name: string
+  file: File
+  uploadedAt: string
+  variables: string[]
+}
+
 const Konfigurasi = () => {
   const [configData, setConfigData] = useState<ConfigData[]>([])
   const [headerImages, setHeaderImages] = useState<ImageData[]>([])
   const [loading, setLoading] = useState(false)
   const [editingConfig, setEditingConfig] = useState<ConfigData | null>(null)
   const [editingImage, setEditingImage] = useState<ImageData | null>(null)
+  const [templates, setTemplates] = useState<WordTemplate[]>([])
+  const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
     loadConfiguration()
     loadImages()
+    loadTemplates()
   }, [])
 
   const loadConfiguration = async () => {
@@ -159,6 +171,119 @@ const Konfigurasi = () => {
     }
   }
 
+  const loadTemplates = () => {
+    // Load from localStorage
+    const saved = localStorage.getItem('wordTemplates')
+    if (saved) {
+      setTemplates(JSON.parse(saved))
+    }
+    
+    const activeId = localStorage.getItem('activeTemplateId')
+    if (activeId) {
+      setActiveTemplateId(activeId)
+    }
+  }
+
+  const handleTemplateUpload = async (file: File) => {
+    if (!TemplateProcessor.validateTemplateFile(file)) {
+      toast({
+        title: "Error",
+        description: "File harus berformat .docx atau .doc",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setLoading(true)
+      
+      // Extract variables from template
+      const variables = await TemplateProcessor.extractVariablesFromTemplate(file)
+      
+      const newTemplate: WordTemplate = {
+        id: Date.now().toString(),
+        name: file.name,
+        file: file,
+        uploadedAt: new Date().toISOString(),
+        variables: variables,
+      }
+
+      const updatedTemplates = [...templates, newTemplate]
+      setTemplates(updatedTemplates)
+      
+      // Save to localStorage
+      localStorage.setItem('wordTemplates', JSON.stringify(updatedTemplates))
+      
+      // Set as active if it's the first template
+      if (updatedTemplates.length === 1) {
+        setActiveTemplateId(newTemplate.id)
+        localStorage.setItem('activeTemplateId', newTemplate.id)
+      }
+
+      toast({
+        title: "Sukses",
+        description: "Template berhasil diupload",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal mengupload template",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const setActiveTemplate = (templateId: string) => {
+    setActiveTemplateId(templateId)
+    localStorage.setItem('activeTemplateId', templateId)
+    toast({
+      title: "Sukses",
+      description: "Template berhasil diaktifkan",
+    })
+  }
+
+  const deleteTemplate = (templateId: string) => {
+    const updatedTemplates = templates.filter(t => t.id !== templateId)
+    setTemplates(updatedTemplates)
+    localStorage.setItem('wordTemplates', JSON.stringify(updatedTemplates))
+    
+    if (activeTemplateId === templateId) {
+      const newActiveId = updatedTemplates.length > 0 ? updatedTemplates[0].id : null
+      setActiveTemplateId(newActiveId)
+      localStorage.setItem('activeTemplateId', newActiveId || '')
+    }
+    
+    toast({
+      title: "Sukses",
+      description: "Template berhasil dihapus",
+    })
+  }
+
+  const previewTemplate = async (template: WordTemplate) => {
+    try {
+      const htmlContent = await TemplateProcessor.convertWordToHtml(template.file)
+      const newWindow = window.open('', '_blank')
+      newWindow?.document.write(`
+        <html>
+          <head><title>Preview Template - ${template.name}</title></head>
+          <body style="padding: 20px; font-family: Arial, sans-serif;">
+            <h2>Preview: ${template.name}</h2>
+            <hr>
+            ${htmlContent}
+          </body>
+        </html>
+      `)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal menampilkan preview template",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -170,29 +295,36 @@ const Konfigurasi = () => {
         <CardContent className="p-0">
           <Tabs defaultValue="numbering" className="w-full">
             <div className="border-b bg-muted/30">
-              <TabsList className="grid w-full grid-cols-3 bg-transparent h-auto p-0">
-                <TabsTrigger 
-                  value="numbering" 
-                  className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary py-4"
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  PENOMORAN
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="images"
-                  className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary py-4"
-                >
-                  <Image className="w-4 h-4 mr-2" />
-                  IMAGES
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="templates"
-                  className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary py-4"
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  TEMPLATE DOKUMEN
-                </TabsTrigger>
-              </TabsList>
+            <TabsList className="grid w-full grid-cols-4 bg-transparent h-auto p-0">
+              <TabsTrigger 
+                value="numbering" 
+                className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary py-4"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                PENOMORAN
+              </TabsTrigger>
+              <TabsTrigger 
+                value="images"
+                className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary py-4"
+              >
+                <Image className="w-4 h-4 mr-2" />
+                IMAGES
+              </TabsTrigger>
+              <TabsTrigger 
+                value="templates"
+                className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary py-4"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                TEMPLATE DOKUMEN
+              </TabsTrigger>
+              <TabsTrigger 
+                value="word-templates"
+                className="data-[state=active]:bg-card data-[state=active]:shadow-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary py-4"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                TEMPLATE SURAT
+              </TabsTrigger>
+            </TabsList>
             </div>
 
             <TabsContent value="numbering" className="p-6 space-y-6">
@@ -464,6 +596,129 @@ const Konfigurasi = () => {
                             </div>
                           </div>
                         </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="word-templates" className="p-6 space-y-6">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-foreground">Template Surat PKL</h3>
+                </div>
+
+                {/* Upload Template Section */}
+                <Card className="border-border shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base">Upload Template</CardTitle>
+                    <CardDescription>
+                      Upload file Word sebagai template surat pengajuan PKL
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                      <input
+                        type="file"
+                        accept=".docx,.doc"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            handleTemplateUpload(file)
+                          }
+                        }}
+                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                      />
+                      <p className="mt-2 text-sm text-gray-500">
+                        Upload file Word (.docx) sebagai template surat
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Template List */}
+                <Card className="border-border shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base">Template Tersedia</CardTitle>
+                    <CardDescription>
+                      Daftar template yang sudah diupload
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {templates.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p>Belum ada template yang diupload</p>
+                        </div>
+                      ) : (
+                        templates.map((template) => (
+                          <div key={template.id} className="border rounded-lg p-4 flex justify-between items-center">
+                            <div>
+                              <h4 className="font-medium">{template.name}</h4>
+                              <p className="text-sm text-gray-500">
+                                Diupload pada {new Date(template.uploadedAt).toLocaleDateString('id-ID')}
+                              </p>
+                              {template.id === activeTemplateId && (
+                                <Badge variant="default" className="mt-1">Template Aktif</Badge>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => previewTemplate(template)}
+                              >
+                                <FileText className="w-4 h-4 mr-1" />
+                                Preview
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setActiveTemplate(template.id)}
+                                disabled={template.id === activeTemplateId}
+                              >
+                                {template.id === activeTemplateId ? 'Aktif' : 'Aktifkan'}
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => deleteTemplate(template.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Variables Guide */}
+                <Card className="border-border shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base">Panduan Variabel Template</CardTitle>
+                    <CardDescription>
+                      Variabel yang dapat digunakan dalam template Word
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-sm text-gray-600 mb-3">
+                        Gunakan variabel berikut dalam template Word Anda:
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div><code className="bg-gray-200 px-1 rounded">${'KOTA'}</code> - Nama kota</div>
+                        <div><code className="bg-gray-200 px-1 rounded">${'TANGGAL'}</code> - Tanggal surat</div>
+                        <div><code className="bg-gray-200 px-1 rounded">${'NOMORSURAT'}</code> - Nomor surat</div>
+                        <div><code className="bg-gray-200 px-1 rounded">${'NAMAPERUSAHAAN'}</code> - Nama perusahaan</div>
+                        <div><code className="bg-gray-200 px-1 rounded">${'ALAMATPERUSAHAAN'}</code> - Alamat perusahaan</div>
+                        <div><code className="bg-gray-200 px-1 rounded">${'COL_NO'}</code> - Kolom nomor</div>
+                        <div><code className="bg-gray-200 px-1 rounded">${'COL_NAMA'}</code> - Kolom nama siswa</div>
+                        <div><code className="bg-gray-200 px-1 rounded">${'COL_KELAS'}</code> - Kolom kelas</div>
+                        <div><code className="bg-gray-200 px-1 rounded">${'COL_HP'}</code> - Kolom HP siswa</div>
                       </div>
                     </div>
                   </CardContent>
