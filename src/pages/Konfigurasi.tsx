@@ -172,10 +172,23 @@ const Konfigurasi = () => {
   }
 
   const loadTemplates = () => {
-    // Load from localStorage
+    // Load from localStorage (templates are stored as ArrayBuffer base64)
     const saved = localStorage.getItem('wordTemplates')
     if (saved) {
-      setTemplates(JSON.parse(saved))
+      try {
+        const parsedTemplates = JSON.parse(saved)
+        // Convert base64 back to File objects
+        const templatesWithFiles = parsedTemplates.map((template: any) => ({
+          ...template,
+          file: new File([new Uint8Array(atob(template.fileData).split('').map(c => c.charCodeAt(0)))], template.name, {
+            type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          })
+        }))
+        setTemplates(templatesWithFiles)
+      } catch (error) {
+        console.error('Error loading templates:', error)
+        setTemplates([])
+      }
     }
     
     const activeId = localStorage.getItem('activeTemplateId')
@@ -211,8 +224,17 @@ const Konfigurasi = () => {
       const updatedTemplates = [...templates, newTemplate]
       setTemplates(updatedTemplates)
       
-      // Save to localStorage
-      localStorage.setItem('wordTemplates', JSON.stringify(updatedTemplates))
+      // Save to localStorage (convert File to base64)
+      const templatesForStorage = await Promise.all(updatedTemplates.map(async (template) => {
+        const arrayBuffer = await template.file.arrayBuffer()
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+        return {
+          ...template,
+          file: undefined, // Remove file object
+          fileData: base64 // Store as base64
+        }
+      }))
+      localStorage.setItem('wordTemplates', JSON.stringify(templatesForStorage))
       
       // Set as active if it's the first template
       if (updatedTemplates.length === 1) {
@@ -244,10 +266,21 @@ const Konfigurasi = () => {
     })
   }
 
-  const deleteTemplate = (templateId: string) => {
+  const deleteTemplate = async (templateId: string) => {
     const updatedTemplates = templates.filter(t => t.id !== templateId)
     setTemplates(updatedTemplates)
-    localStorage.setItem('wordTemplates', JSON.stringify(updatedTemplates))
+    
+    // Save to localStorage (convert File to base64)
+    const templatesForStorage = await Promise.all(updatedTemplates.map(async (template) => {
+      const arrayBuffer = await template.file.arrayBuffer()
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+      return {
+        ...template,
+        file: undefined, // Remove file object
+        fileData: base64 // Store as base64
+      }
+    }))
+    localStorage.setItem('wordTemplates', JSON.stringify(templatesForStorage))
     
     if (activeTemplateId === templateId) {
       const newActiveId = updatedTemplates.length > 0 ? updatedTemplates[0].id : null
@@ -484,26 +517,23 @@ const Konfigurasi = () => {
             <TabsContent value="templates" className="p-6 space-y-6">
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-foreground">Surat Pengajuan PKL</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Template Surat Pengajuan PKL</h3>
                   <div className="flex gap-2">
                     <div className="relative">
                       <input
                         type="file"
-                        accept=".docx,.pdf,.doc"
+                        accept=".docx,.doc"
                         onChange={(e) => {
                           const file = e.target.files?.[0]
                           if (file) {
-                            toast({
-                              title: "Sukses",
-                              description: `Template ${file.name} berhasil diupload`
-                            })
+                            handleTemplateUpload(file)
                           }
                         }}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" disabled={loading}>
                         <Upload className="w-4 h-4 mr-2" />
-                        Upload Dokumen
+                        Upload Template Word
                       </Button>
                     </div>
                     <Button 
@@ -526,89 +556,81 @@ const Konfigurasi = () => {
                   </div>
                 </div>
 
-                <Card className="border-border shadow-sm">
-                  <CardContent className="p-6">
-                    <div className="bg-muted/30 p-6 rounded-lg min-h-[400px]">
-                      <div className="bg-card p-6 rounded shadow-sm">
-                        <div className="text-center mb-6">
-                          <div className="flex items-center justify-center gap-4 mb-4">
-                            <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center">
-                              <FileText className="w-8 h-8 text-primary" />
+                {/* Template List */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-medium">Template yang Tersedia</h4>
+                  {templates.length === 0 ? (
+                    <Card className="border-border shadow-sm">
+                      <CardContent className="p-6 text-center">
+                        <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-medium mb-2">Belum ada template</h3>
+                        <p className="text-muted-foreground mb-4">Upload file Word (.docx) untuk membuat template surat pengajuan PKL</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid gap-4">
+                      {templates.map((template) => (
+                        <Card key={template.id} className={`border-border shadow-sm ${activeTemplateId === template.id ? 'ring-2 ring-primary' : ''}`}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center">
+                                  <FileText className="w-5 h-5 text-primary" />
+                                </div>
+                                <div>
+                                  <h4 className="font-medium">{template.name}</h4>
+                                  <p className="text-sm text-muted-foreground">
+                                    Diupload {new Date(template.uploadedAt).toLocaleDateString()}
+                                  </p>
+                                  {activeTemplateId === template.id && (
+                                    <Badge variant="default" className="text-xs">Template Aktif</Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => previewTemplate(template)}
+                                >
+                                  Preview
+                                </Button>
+                                {activeTemplateId !== template.id && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setActiveTemplate(template.id)}
+                                  >
+                                    Aktifkan
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => deleteTemplate(template.id)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </div>
-                            <div>
-                              <h4 className="font-bold text-lg text-foreground">SMK KRIAN 1</h4>
-                              <p className="text-sm text-muted-foreground">KOMPETENSI KEAHLIAN REKAYASA PERANGKAT LUNAK</p>
-                              <p className="text-sm text-muted-foreground">Jl. Kyai Mojo, Krian, Sidoarjo - Jawa Timur</p>
-                            </div>
-                          </div>
-                          <h2 className="text-xl font-bold text-foreground mb-2">SURAT PENGAJUAN PKL</h2>
-                          <p className="text-sm text-muted-foreground">No: [NOMOR_SURAT]</p>
-                        </div>
-                        
-                        <div className="space-y-4 text-sm">
-                          <div>
-                            <p>Kepada Yth.</p>
-                            <p className="font-semibold">[NAMA_PERUSAHAAN]</p>
-                            <p>[ALAMAT_PERUSAHAAN]</p>
-                          </div>
-                          
-                          <div>
-                            <p>Dengan hormat,</p>
-                            <p className="text-justify">
-                              Sehubungan dengan pelaksanaan Praktik Kerja Lapangan (PKL) bagi siswa SMK Krian 1,
-                              maka dengan ini kami mengajukan permohonan untuk dapat melaksanakan PKL di perusahaan
-                              yang Bapak/Ibu pimpin.
-                            </p>
-                          </div>
-                          
-                          <div>
-                            <p className="font-semibold mb-2">Data Siswa:</p>
-                            <table className="w-full border border-border text-xs">
-                              <thead className="bg-muted/50">
-                                <tr>
-                                  <th className="border border-border p-2">No</th>
-                                  <th className="border border-border p-2">Nama Siswa</th>
-                                  <th className="border border-border p-2">Kelas</th>
-                                  <th className="border border-border p-2">No. HP</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr>
-                                  <td className="border border-border p-2 text-center">1</td>
-                                  <td className="border border-border p-2">[NAMA_SISWA_1]</td>
-                                  <td className="border border-border p-2">[KELAS_1]</td>
-                                  <td className="border border-border p-2">[HP_1]</td>
-                                </tr>
-                                <tr>
-                                  <td className="border border-border p-2 text-center">2</td>
-                                  <td className="border border-border p-2">[NAMA_SISWA_2]</td>
-                                  <td className="border border-border p-2">[KELAS_2]</td>
-                                  <td className="border border-border p-2">[HP_2]</td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-                          
-                          <div>
-                            <p className="text-justify">
-                              Demikian surat permohonan ini kami sampaikan. Atas perhatian dan kerjasamanya 
-                              kami ucapkan terima kasih.
-                            </p>
-                          </div>
-                          
-                          <div className="flex justify-end mt-8">
-                            <div className="text-center">
-                              <p>Krian, [TANGGAL]</p>
-                              <p className="mb-16">Kepala Sekolah</p>
-                              <p className="font-semibold">[NAMA_KEPALA_SEKOLAH]</p>
-                              <p>NIP: [NIP_KEPALA_SEKOLAH]</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                            {template.variables.length > 0 && (
+                              <div className="mt-3 pt-3 border-t">
+                                <p className="text-sm font-medium mb-2">Variabel dalam template:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {template.variables.map((variable) => (
+                                    <Badge key={variable} variant="secondary" className="text-xs">
+                                      ${variable}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
+                </div>
               </div>
             </TabsContent>
           </Tabs>
