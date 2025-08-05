@@ -53,34 +53,59 @@ const Konfigurasi = () => {
   }, [])
 
   const loadConfiguration = async () => {
-    // For now, using static data but can be connected to Supabase later
-    const defaultConfig: ConfigData[] = [
-      { id: "1", label: "ASPEK PENILAIAN", value: "18", template: "ASPmm", type: "numbering" },
-      { id: "2", label: "PERUSAHAAN (DU/DI)", value: "2011", template: "DUDImm", type: "numbering" },
-      { id: "3", label: "PEMBIMBING LAPANGAN", value: "479", template: "PBLmm", type: "numbering" },
-      { id: "4", label: "NOMOR SURAT PENGAJUAN", value: "1", template: "(mm)", type: "numbering" },
-      { id: "5", label: "NOMOR SURAT TUGAS", value: "203", template: "463.2/76 (N)/404.3.9/SMK KRIAN 1/R", type: "numbering" },
-    ]
-    setConfigData(defaultConfig)
+    try {
+      // Load from localStorage first, fallback to default
+      const saved = localStorage.getItem('configData')
+      if (saved) {
+        const parsedConfig = JSON.parse(saved)
+        setConfigData(parsedConfig)
+        return
+      }
+      
+      const defaultConfig: ConfigData[] = [
+        { id: "1", label: "ASPEK PENILAIAN", value: "18", template: "ASPmm", type: "numbering" },
+        { id: "2", label: "PERUSAHAAN (DU/DI)", value: "2011", template: "DUDImm", type: "numbering" },
+        { id: "3", label: "PEMBIMBING LAPANGAN", value: "479", template: "PBLmm", type: "numbering" },
+        { id: "4", label: "NOMOR SURAT PENGAJUAN", value: "1", template: "(mm)", type: "numbering" },
+        { id: "5", label: "NOMOR SURAT TUGAS", value: "203", template: "463.2/76 (N)/404.3.9/SMK KRIAN 1/R", type: "numbering" },
+      ]
+      setConfigData(defaultConfig)
+      localStorage.setItem('configData', JSON.stringify(defaultConfig))
+    } catch (error) {
+      console.error('Error loading configuration:', error)
+    }
   }
 
   const loadImages = async () => {
-    const defaultImages: ImageData[] = [
-      { id: "1", name: "SMK Krian 1 Header", type: "report-header", active: true },
-      { id: "2", name: "Background Sertifikat Side A", type: "certificate-bg", active: false },
-      { id: "3", name: "Background Sertifikat Side B", type: "certificate-bg", active: false },
-    ]
-    setHeaderImages(defaultImages)
+    try {
+      // Load from localStorage first, fallback to default
+      const saved = localStorage.getItem('headerImages')
+      if (saved) {
+        const parsedImages = JSON.parse(saved)
+        setHeaderImages(parsedImages)
+        return
+      }
+      
+      const defaultImages: ImageData[] = [
+        { id: "1", name: "SMK Krian 1 Header", type: "report-header", active: true },
+        { id: "2", name: "Background Sertifikat Side A", type: "certificate-bg", active: false },
+        { id: "3", name: "Background Sertifikat Side B", type: "certificate-bg", active: false },
+      ]
+      setHeaderImages(defaultImages)
+      localStorage.setItem('headerImages', JSON.stringify(defaultImages))
+    } catch (error) {
+      console.error('Error loading images:', error)
+    }
   }
 
   const saveConfiguration = async (config: ConfigData) => {
     try {
       setLoading(true)
-      // Update the local state (can be connected to Supabase later)
       const updatedConfig = configData.map(item => 
         item.id === config.id ? config : item
       )
       setConfigData(updatedConfig)
+      localStorage.setItem('configData', JSON.stringify(updatedConfig))
       
       toast({
         title: "Sukses",
@@ -113,7 +138,9 @@ const Konfigurasi = () => {
         url: URL.createObjectURL(file)
       }
       
-      setHeaderImages([...headerImages, newImage])
+      const updatedImages = [...headerImages, newImage]
+      setHeaderImages(updatedImages)
+      localStorage.setItem('headerImages', JSON.stringify(updatedImages))
       
       toast({
         title: "Sukses",
@@ -137,6 +164,7 @@ const Konfigurasi = () => {
         active: img.id === imageId ? !img.active : false
       }))
       setHeaderImages(updatedImages)
+      localStorage.setItem('headerImages', JSON.stringify(updatedImages))
       
       toast({
         title: "Sukses", 
@@ -157,6 +185,7 @@ const Konfigurasi = () => {
     try {
       const updatedImages = headerImages.filter(img => img.id !== imageId)
       setHeaderImages(updatedImages)
+      localStorage.setItem('headerImages', JSON.stringify(updatedImages))
       
       toast({
         title: "Sukses",
@@ -493,16 +522,26 @@ const Konfigurasi = () => {
                             <Edit className="w-4 h-4 mr-1" />
                             Edit
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              const link = document.createElement('a')
-                              link.href = image.url || '#'
-                              link.download = image.name
-                              link.click()
-                            }}
-                          >
+                           <Button 
+                             variant="outline" 
+                             size="sm"
+                             onClick={() => {
+                               if (image.url) {
+                                 const link = document.createElement('a')
+                                 link.href = image.url
+                                 link.download = image.name || 'image'
+                                 document.body.appendChild(link)
+                                 link.click()
+                                 document.body.removeChild(link)
+                               } else {
+                                 toast({
+                                   title: "Error",
+                                   description: "Image tidak dapat didownload",
+                                   variant: "destructive"
+                                 })
+                               }
+                             }}
+                           >
                             <Download className="w-4 h-4 mr-2" />
                             Download
                           </Button>
@@ -674,12 +713,13 @@ const Konfigurasi = () => {
                 <Button variant="outline" onClick={() => setEditingImage(null)}>
                   Batal
                 </Button>
-                <Button onClick={() => {
+                  <Button onClick={() => {
                   if (editingImage) {
                     const updatedImages = headerImages.map(img => 
                       img.id === editingImage.id ? editingImage : img
                     )
                     setHeaderImages(updatedImages)
+                    localStorage.setItem('headerImages', JSON.stringify(updatedImages))
                     setEditingImage(null)
                     toast({
                       title: "Sukses",
