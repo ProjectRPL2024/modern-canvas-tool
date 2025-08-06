@@ -32,9 +32,9 @@ const Pengantaran = () => {
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any | null>(null)
-  const [uploadedTemplate, setUploadedTemplate] = useState<File | null>(null)
-  const [templateVariables, setTemplateVariables] = useState<string[]>([])
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false)
+  const [configTemplates, setConfigTemplates] = useState<any[]>([])
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
   const { toast } = useToast()
 
   const [formData, setFormData] = useState<PickupDelivery>({
@@ -49,7 +49,20 @@ const Pengantaran = () => {
 
   useEffect(() => {
     fetchData()
+    loadConfigTemplates()
   }, [])
+
+  const loadConfigTemplates = () => {
+    try {
+      const savedTemplates = localStorage.getItem('wordTemplates')
+      if (savedTemplates) {
+        const templates = JSON.parse(savedTemplates)
+        setConfigTemplates(templates)
+      }
+    } catch (error) {
+      console.error('Error loading templates:', error)
+    }
+  }
 
   const fetchData = async () => {
     try {
@@ -160,24 +173,19 @@ const Pengantaran = () => {
     })
   }
 
-  const handleTemplateUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!TemplateProcessor.validateTemplateFile(file)) {
-      toast({ title: "File harus berformat .docx atau .doc", variant: "destructive" });
-      return;
-    }
-
+  const getConfigData = (key: string) => {
     try {
-      setUploadedTemplate(file);
-      const variables = await TemplateProcessor.extractVariablesFromTemplate(file);
-      setTemplateVariables(variables);
-      toast({ title: "Template berhasil diupload" });
+      const saved = localStorage.getItem('configData')
+      if (saved) {
+        const config = JSON.parse(saved)
+        const item = config.find((item: any) => item.label === key)
+        return item?.value || ''
+      }
     } catch (error) {
-      toast({ title: "Gagal memproses template", variant: "destructive" });
+      console.error('Error getting config:', error)
     }
-  };
+    return ''
+  }
 
   const generateSuratPengajuan = async (item: any) => {
     const doc = generateSuratPengajuanPDF(item.companies?.nama, item.companies?.alamat)
@@ -189,33 +197,66 @@ const Pengantaran = () => {
     })
   }
 
-  const generateFromTemplate = async () => {
-    if (!editingItem || !uploadedTemplate) return;
+  const generateFromTemplate = async (item: any) => {
+    if (!selectedTemplateId) {
+      toast({ title: "Pilih template terlebih dahulu", variant: "destructive" });
+      return;
+    }
 
     try {
+      const template = configTemplates.find(t => t.id === selectedTemplateId);
+      if (!template) {
+        toast({ title: "Template tidak ditemukan", variant: "destructive" });
+        return;
+      }
+
+      // Convert base64 to File
+      const binaryString = window.atob(template.file);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const templateFile = new File([bytes], template.name, { 
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+      });
+
+      // Get current student data for this company/period
+      const { data: placements } = await supabase
+        .from('pkl_placements')
+        .select(`
+          id,
+          students (nama, rombel, nis)
+        `)
+        .eq('company_id', item.company_id)
+        .eq('period_id', item.period_id);
+
+      const siswaData = placements?.map((placement, index) => ({
+        no: index + 1,
+        nama: placement.students?.nama || '',
+        kelas: placement.students?.rombel || '',
+        hp: '-' // HP tidak tersedia di database
+      })) || [];
+
       const variables: TemplateVariables = {
-        KOTA: "Sidoarjo",
+        KOTA: getConfigData('KOTA') || "Sidoarjo",
         TANGGAL: new Date().toISOString(),
-        NOMORSURAT: `001/PKL/2024`,
-        NAMAPERUSAHAAN: editingItem?.companies?.nama || "",
-        ALAMATPERUSAHAAN: editingItem?.companies?.alamat || "",
+        NOMORSURAT: getConfigData('NOMOR_SURAT') || `001/PKL/${new Date().getFullYear()}`,
+        NAMAPERUSAHAAN: item.companies?.nama || "",
+        ALAMATPERUSAHAAN: item.companies?.alamat || "",
         COL_NO: "No",
-        COL_NAMA: "Nama",
+        COL_NAMA: "Nama Siswa",
         COL_KELAS: "Kelas", 
-        COL_HP: "HP",
-        siswaData: [
-          { no: 1, nama: "Contoh Siswa 1", kelas: "XII RPL 1", hp: "081234567890" },
-          { no: 2, nama: "Contoh Siswa 2", kelas: "XII RPL 1", hp: "081234567891" }
-        ]
+        COL_HP: "No. HP",
+        siswaData
       };
 
-      const processedDoc = await TemplateProcessor.processWordTemplate(uploadedTemplate, variables);
+      const processedDoc = await TemplateProcessor.processWordTemplate(templateFile, variables);
       
-      // Download file Word yang sudah diproses
+      // Download processed Word document
       const url = URL.createObjectURL(processedDoc);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Surat_Pengajuan_PKL_${editingItem?.companies?.nama?.replace(/\s+/g, '_') || 'Template'}.docx`;
+      a.download = `Surat_Pengajuan_PKL_${item.companies?.nama?.replace(/\s+/g, '_') || 'Template'}.docx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -223,8 +264,10 @@ const Pengantaran = () => {
       
       toast({ title: "Surat pengajuan berhasil dibuat dari template" });
       setTemplateDialogOpen(false);
+      setSelectedTemplateId("");
     } catch (error) {
-      toast({ title: "Gagal membuat surat", variant: "destructive" });
+      console.error('Error generating from template:', error);
+      toast({ title: "Gagal membuat surat dari template", variant: "destructive" });
     }
   };
 
@@ -380,66 +423,66 @@ const Pengantaran = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Template Upload Dialog */}
+          {/* Template Dialog */}
           <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>Upload Template Surat Pengajuan</DialogTitle>
+                <DialogTitle>Generate Surat Pengajuan dari Template</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="template-upload">Upload Template Word (.docx)</Label>
-                  <div className="mt-2">
-                    <input
-                      type="file"
-                      id="template-upload"
-                      accept=".docx,.doc"
-                      onChange={handleTemplateUpload}
-                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                    {uploadedTemplate && (
-                      <p className="mt-2 text-sm text-green-600">
-                        Template uploaded: {uploadedTemplate.name}
-                      </p>
-                    )}
+                {configTemplates.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground mb-4">Belum ada template yang tersedia.</p>
+                    <Button variant="outline" onClick={() => window.open('/konfigurasi', '_blank')}>
+                      Kelola Template di Konfigurasi
+                    </Button>
                   </div>
-                </div>
-
-                {templateVariables.length > 0 && (
-                  <div>
-                    <Label>Variabel yang Tersedia dalam Template:</Label>
-                    <div className="mt-2 p-3 bg-gray-50 rounded-md max-h-40 overflow-y-auto">
-                      <ul className="text-sm space-y-1">
-                        {templateVariables.map((variable, index) => (
-                          <li key={index} className="font-mono text-blue-600">
-                            ${"{" + variable + "}"}
-                          </li>
-                        ))}
-                      </ul>
+                ) : (
+                  <>
+                    <div>
+                      <Label htmlFor="template-select">Pilih Template</Label>
+                      <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih template yang akan digunakan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {configTemplates.map((template) => (
+                            <SelectItem key={template.id} value={template.id}>
+                              {template.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </div>
+
+                    {selectedTemplateId && (
+                      <div className="bg-blue-50 p-3 rounded-md">
+                        <h4 className="font-semibold text-sm text-blue-800">Informasi Template:</h4>
+                        <ul className="text-xs text-blue-600 mt-1 space-y-1">
+                          <li>• Data siswa akan diambil dari penempatan PKL untuk perusahaan ini</li>
+                          <li>• Konfigurasi kota dan nomor surat diambil dari pengaturan</li>
+                          <li>• File hasil akan berformat .docx</li>
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => {
+                        setTemplateDialogOpen(false);
+                        setSelectedTemplateId("");
+                      }}>
+                        Batal
+                      </Button>
+                      <Button 
+                        onClick={() => generateFromTemplate(editingItem)}
+                        disabled={!selectedTemplateId}
+                      >
+                        Generate Surat
+                      </Button>
+                    </div>
+                  </>
                 )}
-
-                <div className="bg-yellow-50 p-3 rounded-md">
-                  <h4 className="font-semibold text-sm">Panduan Penggunaan Template:</h4>
-                  <ul className="text-xs text-gray-600 mt-1 space-y-1">
-                    <li>• Gunakan variabel seperti ${"{KOTA}"}, ${"{TANGGAL}"}, ${"{NAMAPERUSAHAAN}"}</li>
-                    <li>• Template akan otomatis mengisi data dari aplikasi</li>
-                    <li>• File hasil akan berformat .docx</li>
-                  </ul>
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setTemplateDialogOpen(false)}>
-                    Batal
-                  </Button>
-                  <Button 
-                    onClick={generateFromTemplate}
-                    disabled={!uploadedTemplate}
-                  >
-                    Generate Surat
-                  </Button>
-                </div>
               </div>
             </DialogContent>
           </Dialog>
@@ -529,8 +572,20 @@ const Pengantaran = () => {
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => generateSuratPengajuan(item)}
+                                title="Generate PDF"
                               >
                                 <FileText className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => {
+                                  setEditingItem(item);
+                                  setTemplateDialogOpen(true);
+                                }}
+                                title="Generate dari Template"
+                              >
+                                <Download className="w-4 h-4" />
                               </Button>
                               <Button 
                                 variant="outline" 
@@ -599,8 +654,20 @@ const Pengantaran = () => {
                           variant="outline" 
                           size="sm"
                           onClick={() => generateSuratPengajuan(item)}
+                          title="Generate PDF"
                         >
                           <FileText className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setEditingItem(item);
+                            setTemplateDialogOpen(true);
+                          }}
+                          title="Generate dari Template"
+                        >
+                          <Download className="w-4 h-4" />
                         </Button>
                         <Button 
                           variant="outline" 
