@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Search, Users, Eye } from "lucide-react"
+import { Search, Users, Eye, Edit } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
+import { MentoringCRUD, DeleteMentoringButton } from "@/components/MentoringCRUD"
 
 const Pembimbingan = () => {
   const [searchTerm, setSearchTerm] = useState("")
@@ -14,6 +15,7 @@ const Pembimbingan = () => {
   const [companies, setCompanies] = useState<any[]>([])
   const [mentoring, setMentoring] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [editingItem, setEditingItem] = useState<any | null>(null)
 
   useEffect(() => {
     fetchCompanies()
@@ -64,10 +66,11 @@ const Pembimbingan = () => {
           <h1 className="text-3xl font-bold text-foreground">Pembimbingan Siswa PKL</h1>
           <p className="text-muted-foreground">Kelola pembimbingan siswa praktik kerja lapangan</p>
         </div>
-        <Button variant="outline" size="sm">
-          <Eye className="w-4 h-4 mr-2" />
-          View
-        </Button>
+        <MentoringCRUD 
+          onDataChange={fetchMentoring}
+          editingMentoring={editingItem}
+          onEditCancel={() => setEditingItem(null)}
+        />
       </div>
 
       <Card className="border-0 shadow-soft">
@@ -132,13 +135,14 @@ const Pembimbingan = () => {
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">NIS</th>
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">NAMA SISWA</th>
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">CATATAN PEMBIMBINGAN</th>
-                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm">TANGGAL</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">TANGGAL</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm">AKSI</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredMentoring.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="py-8 text-center text-muted-foreground">
+                        <td colSpan={5} className="py-8 text-center text-muted-foreground">
                           No data to display
                         </td>
                       </tr>
@@ -154,8 +158,16 @@ const Pembimbingan = () => {
                           <td className="py-3 px-4 border-r border-border text-sm text-muted-foreground">
                             {item.catatan_pembimbingan || "Belum ada catatan"}
                           </td>
-                          <td className="py-3 px-4 text-sm text-muted-foreground">
+                          <td className="py-3 px-4 border-r border-border text-sm text-muted-foreground">
                             {new Date(item.tanggal).toLocaleDateString('id-ID')}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm" onClick={() => setEditingItem(item)}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <DeleteMentoringButton mentoringId={item.id} onDelete={fetchMentoring} />
+                            </div>
                           </td>
                         </tr>
                       ))

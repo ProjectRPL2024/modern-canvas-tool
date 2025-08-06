@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Search, Calendar, Clock } from "lucide-react"
+import { Search, Calendar, Clock, Edit } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
+import { AttendanceCRUD, DeleteAttendanceButton } from "@/components/AttendanceCRUD"
 
 const Presensi = () => {
   const [searchTerm, setSearchTerm] = useState("")
@@ -14,6 +15,7 @@ const Presensi = () => {
   const [companies, setCompanies] = useState<any[]>([])
   const [attendance, setAttendance] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [editingItem, setEditingItem] = useState<any | null>(null)
 
   useEffect(() => {
     fetchCompanies()
@@ -66,6 +68,11 @@ const Presensi = () => {
           <h1 className="text-3xl font-bold text-foreground">Presensi Siswa PKL</h1>
           <p className="text-muted-foreground">Kelola presensi siswa praktik kerja lapangan</p>
         </div>
+        <AttendanceCRUD 
+          onDataChange={fetchAttendance}
+          editingAttendance={editingItem}
+          onEditCancel={() => setEditingItem(null)}
+        />
       </div>
 
       <Card className="border-0 shadow-soft">
@@ -133,13 +140,14 @@ const Presensi = () => {
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">TERLAMBAT</th>
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">DATANG</th>
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">PULANG</th>
-                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm">KETERANGAN</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">KETERANGAN</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm">AKSI</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredAttendance.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                        <td colSpan={8} className="py-8 text-center text-muted-foreground">
                           No data to display
                         </td>
                       </tr>
@@ -174,8 +182,16 @@ const Presensi = () => {
                           <td className="py-3 px-4 border-r border-border text-sm text-muted-foreground">
                             -
                           </td>
-                          <td className="py-3 px-4 text-sm text-muted-foreground">
+                          <td className="py-3 px-4 border-r border-border text-sm text-muted-foreground">
                             {item.keterangan || "-"}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm" onClick={() => setEditingItem(item)}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <DeleteAttendanceButton attendanceId={item.id} onDelete={fetchAttendance} />
+                            </div>
                           </td>
                         </tr>
                       ))

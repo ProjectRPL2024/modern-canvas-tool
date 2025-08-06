@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Truck, Edit, FileText, Calendar, Plus, Download, Trash2 } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
@@ -309,6 +309,9 @@ const Pengantaran = () => {
                 <DialogTitle>
                   {editingItem ? "Edit Pengantaran" : "Tambah Pengantaran Baru"}
                 </DialogTitle>
+                <DialogDescription>
+                  {editingItem ? "Ubah data pengantaran yang sudah ada" : "Tambahkan data pengantaran siswa PKL"}
+                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -428,6 +431,9 @@ const Pengantaran = () => {
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>Generate Surat Pengajuan dari Template</DialogTitle>
+                <DialogDescription>
+                  Pilih template yang akan digunakan untuk membuat surat pengajuan PKL
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 {configTemplates.length === 0 ? (

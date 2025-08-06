@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Search, Shield, Plus, Edit, Trash2 } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
+import { MonitoringCRUD, DeleteMonitoringButton } from "@/components/MonitoringCRUD"
 
 const Monitoring = () => {
   const [searchTerm, setSearchTerm] = useState("")
@@ -13,6 +14,7 @@ const Monitoring = () => {
   const [companies, setCompanies] = useState<any[]>([])
   const [monitoring, setMonitoring] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [editingItem, setEditingItem] = useState<any | null>(null)
 
   useEffect(() => {
     fetchCompanies()
@@ -55,9 +57,11 @@ const Monitoring = () => {
           <p className="text-muted-foreground">Kelola monitoring dan pelanggaran siswa PKL</p>
         </div>
         <div className="flex gap-2">
-          <Button size="sm"><Plus className="w-4 h-4 mr-2" />Add</Button>
-          <Button variant="outline" size="sm"><Edit className="w-4 h-4 mr-2" />Edit</Button>
-          <Button variant="outline" size="sm"><Trash2 className="w-4 h-4 mr-2" />Del</Button>
+          <MonitoringCRUD 
+            onDataChange={fetchMonitoring}
+            editingMonitoring={editingItem}
+            onEditCancel={() => setEditingItem(null)}
+          />
         </div>
       </div>
 
@@ -102,11 +106,12 @@ const Monitoring = () => {
                     <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm">NAMA GURU PEMBIMBING</th>
                     <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm">PELANGGARAN</th>
                     <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm">MONITORING KEGIATAN</th>
+                    <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm">AKSI</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredMonitoring.length === 0 ? (
-                    <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">No data to display</td></tr>
+                     <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">No data to display</td></tr>
                   ) : (
                     filteredMonitoring.map((item, index) => (
                       <tr key={item.id} className={`${index % 2 === 0 ? 'bg-card' : 'bg-muted/20'} hover:bg-muted/40 transition-colors`}>
@@ -114,6 +119,14 @@ const Monitoring = () => {
                         <td className="py-3 px-4">{item.teachers?.nama || "-"}</td>
                         <td className="py-3 px-4">{item.jenis_monitoring === 'PELANGGARAN' ? item.catatan : "-"}</td>
                         <td className="py-3 px-4">{item.jenis_monitoring === 'MONITORING' ? item.catatan : "-"}</td>
+                        <td className="py-3 px-4">
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => setEditingItem(item)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <DeleteMonitoringButton monitoringId={item.id} onDelete={fetchMonitoring} />
+                          </div>
+                        </td>
                       </tr>
                     ))
                   )}

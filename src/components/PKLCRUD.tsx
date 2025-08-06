@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/integrations/supabase/client"
@@ -138,6 +138,9 @@ export const PKLCRUD = ({ onDataChange, editingPKL, onEditCancel }: PKLCRUDProps
           <DialogTitle>
             {editingPKL ? "Edit PKL" : "Tambah PKL Baru"}
           </DialogTitle>
+          <DialogDescription>
+            {editingPKL ? "Ubah data penempatan PKL yang sudah ada" : "Tambahkan penempatan PKL baru"}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

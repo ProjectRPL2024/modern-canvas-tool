@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Search, Star } from "lucide-react"
+import { Search, Star, Edit } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
+import { GradesCRUD, DeleteGradeButton } from "@/components/GradesCRUD"
 
 const Penilaian = () => {
   const [searchTerm, setSearchTerm] = useState("")
@@ -14,6 +15,7 @@ const Penilaian = () => {
   const [companies, setCompanies] = useState<any[]>([])
   const [students, setStudents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [editingItem, setEditingItem] = useState<any | null>(null)
 
   useEffect(() => {
     fetchCompanies()
@@ -66,6 +68,11 @@ const Penilaian = () => {
           <h1 className="text-3xl font-bold text-foreground">Penilaian Siswa PKL</h1>
           <p className="text-muted-foreground">Kelola penilaian siswa praktik kerja lapangan</p>
         </div>
+        <GradesCRUD 
+          onDataChange={fetchStudents}
+          editingGrade={editingItem}
+          onEditCancel={() => setEditingItem(null)}
+        />
       </div>
 
       <Card className="border-0 shadow-soft">
@@ -129,17 +136,18 @@ const Penilaian = () => {
                   <thead className="bg-muted/50">
                     <tr>
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">NIS</th>
-                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">NIS</th>
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">NAMA SISWA</th>
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">NILAI</th>
                       <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">PREDIKAT</th>
-                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm">ASPEK PENILAIAN</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">PREDIKAT</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm border-r border-border">ASPEK PENILAIAN</th>
+                      <th className="text-left py-3 px-4 font-semibold text-muted-foreground text-sm">AKSI</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredStudents.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center text-muted-foreground">
+                        <td colSpan={7} className="py-8 text-center text-muted-foreground">
                           No data to display
                         </td>
                       </tr>
@@ -151,9 +159,6 @@ const Penilaian = () => {
                         
                         return (
                           <tr key={student.id} className={`${index % 2 === 0 ? 'bg-card' : 'bg-muted/20'} hover:bg-muted/40 transition-colors`}>
-                            <td className="py-3 px-4 border-r border-border">
-                              <span className="font-mono text-sm">{student.nis}</span>
-                            </td>
                             <td className="py-3 px-4 border-r border-border">
                               <span className="font-mono text-sm">{student.nis}</span>
                             </td>
@@ -185,8 +190,18 @@ const Penilaian = () => {
                                 {predikat}
                               </Badge>
                             </td>
-                            <td className="py-3 px-4 text-sm text-muted-foreground">
+                            <td className="py-3 px-4 border-r border-border text-sm text-muted-foreground">
                               {grade?.aspek_penilaian || "Nilai Akhir"}
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex gap-2">
+                                <Button variant="outline" size="sm" onClick={() => setEditingItem(grade)}>
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                {grade?.id && (
+                                  <DeleteGradeButton gradeId={grade.id} onDelete={fetchStudents} />
+                                )}
+                              </div>
                             </td>
                           </tr>
                         )
