@@ -76,10 +76,16 @@ export const MonitoringCRUD = ({ onDataChange, editingMonitoring, onEditCancel }
     setLoading(true)
 
     try {
+      // Clean up formData - remove empty placement_id if not needed
+      const cleanFormData = {
+        ...formData,
+        placement_id: formData.placement_id || null
+      }
+
       if (editingMonitoring?.id) {
         const { error } = await supabase
           .from('monitoring')
-          .update(formData)
+          .update(cleanFormData)
           .eq('id', editingMonitoring.id)
         
         if (error) throw error
@@ -87,7 +93,7 @@ export const MonitoringCRUD = ({ onDataChange, editingMonitoring, onEditCancel }
       } else {
         const { error } = await supabase
           .from('monitoring')
-          .insert([formData])
+          .insert([cleanFormData])
         
         if (error) throw error
         toast({ title: "Sukses", description: "Data monitoring berhasil ditambahkan" })
