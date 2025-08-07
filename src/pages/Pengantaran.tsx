@@ -211,7 +211,7 @@ const Pengantaran = () => {
       }
 
       // Convert base64 to File
-      const binaryString = window.atob(template.file);
+      const binaryString = window.atob(template.fileData);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
